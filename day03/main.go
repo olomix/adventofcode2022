@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/olomix/adventofcode2022/internal"
 )
@@ -18,14 +19,9 @@ func priority(in rune) int {
 
 func commonItem(items [3]string) rune {
 	for _, c1 := range items[0] {
-		for _, c2 := range items[1] {
-			if c1 == c2 {
-				for _, c3 := range items[2] {
-					if c1 == c3 {
-						return c1
-					}
-				}
-			}
+		if strings.ContainsRune(items[1], c1) &&
+			strings.ContainsRune(items[2], c1) {
+			return c1
 		}
 	}
 	panic("[assertion] no common item found")
@@ -58,16 +54,13 @@ LOOP:
 
 		middle := len(txt) / 2
 		for i := 0; i < middle; i++ {
-
-			for j := middle; j < len(txt); j++ {
-				if txt[i] == txt[j] {
-					sum1 += priority(rune(txt[i]))
-					continue LOOP
-				}
+			if strings.ContainsRune(txt[middle:], rune(txt[i])) {
+				sum1 += priority(rune(txt[i]))
+				continue LOOP
 			}
 		}
 	}
 
-	fmt.Printf("sum1: %d\n", sum1)
-	fmt.Printf("sum2: %d\n", sum2)
+	fmt.Printf("sum1: %d\n", sum1) // 7597
+	fmt.Printf("sum2: %d\n", sum2) // 2607
 }
