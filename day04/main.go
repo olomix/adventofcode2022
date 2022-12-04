@@ -8,6 +8,35 @@ import (
 	"github.com/olomix/adventofcode2022/internal"
 )
 
+type rng struct {
+	start int
+	end   int
+}
+
+func decodeRange(in string) rng {
+	pair := strings.Split(in, "-")
+	if len(pair) != 2 {
+		panic("[assertion] len(pairs) != 2")
+	}
+	start, err := strconv.ParseInt(pair[0], 10, 64)
+	internal.Perr(err)
+	end, err := strconv.ParseInt(pair[1], 10, 64)
+	internal.Perr(err)
+
+	return rng{int(start), int(end)}
+}
+
+func decodeRanges(in string) (rng, rng) {
+	pairs := strings.Split(in, ",")
+	if len(pairs) != 2 {
+		panic("[assertion] len(pairs) != 2")
+	}
+
+	pair1 := decodeRange(pairs[0])
+	pair2 := decodeRange(pairs[1])
+	return pair1, pair2
+}
+
 func main() {
 	sum1 := 0
 	sum2 := 0
@@ -17,39 +46,18 @@ func main() {
 			continue
 		}
 
-		pairs := strings.Split(txt, ",")
-		if len(pairs) != 2 {
-			panic("[assertion] len(pairs) != 2")
-		}
+		rng1, rng2 := decodeRanges(txt)
 
-		pair1 := strings.Split(pairs[0], "-")
-		if len(pair1) != 2 {
-			panic("[assertion] len(pairs1) != 2")
-		}
-		pair1Start, err := strconv.ParseInt(pair1[0], 10, 64)
-		internal.Perr(err)
-		pair1End, err := strconv.ParseInt(pair1[1], 10, 64)
-		internal.Perr(err)
-
-		pair2 := strings.Split(pairs[1], "-")
-		if len(pair2) != 2 {
-			panic("[assertion] len(pairs2) != 2")
-		}
-		pair2Start, err := strconv.ParseInt(pair2[0], 10, 64)
-		internal.Perr(err)
-		pair2End, err := strconv.ParseInt(pair2[1], 10, 64)
-		internal.Perr(err)
-
-		if pair1Start >= pair2Start && pair1End <= pair2End {
+		if rng1.start >= rng2.start && rng1.end <= rng2.end {
 			sum1++
-		} else if pair2Start >= pair1Start && pair2End <= pair1End {
+		} else if rng2.start >= rng1.start && rng2.end <= rng1.end {
 			sum1++
 		}
 
 		// check if pair is overlapping
-		if pair1Start <= pair2Start && pair1End >= pair2Start {
+		if rng1.start <= rng2.start && rng1.end >= rng2.start {
 			sum2++
-		} else if pair2Start <= pair1Start && pair2End >= pair1Start {
+		} else if rng2.start <= rng1.start && rng2.end >= rng1.start {
 			sum2++
 		}
 	}
