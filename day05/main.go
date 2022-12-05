@@ -59,13 +59,13 @@ func main() {
 		}
 		n, from, to := parseMove(txt)
 
-		// move field1 1
+		// move field 1
 		for i := 0; i < n; i++ {
 			field1[to] = append(field1[to], field1[from][len(field1[from])-1])
 			field1[from] = field1[from][:len(field1[from])-1]
 		}
 
-		// move field1 2
+		// move field 2
 		field2[to] = append(field2[to],
 			field2[from][len(field2[from])-n:]...)
 		field2[from] = field2[from][:len(field2[from])-n]
