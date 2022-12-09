@@ -24,11 +24,11 @@ func moveTail(hCoord, tCoord coord) coord {
 		return tCoord
 	}
 
-	/* cases:
+	/* cases for head position
 	13 10 11 12 14
-	 9  .  .  .  1
-	 8  .  .  .  2
-	 7  .  .  .  3
+	 9  .  ^  .  1
+	 8  <  T  >  2
+	 7  .  v  .  3
 	16  6  5  4 15
 	*/
 	// 1
@@ -102,26 +102,17 @@ func moveRope(ropeCoords []coord, direction byte) {
 	switch direction {
 	case 'R':
 		ropeCoords[0] = coord{ropeCoords[0].x + 1, ropeCoords[0].y}
-		for i := 1; i < len(ropeCoords); i++ {
-			ropeCoords[i] = moveTail(ropeCoords[i-1], ropeCoords[i])
-		}
 	case 'L':
 		ropeCoords[0] = coord{ropeCoords[0].x - 1, ropeCoords[0].y}
-		for i := 1; i < len(ropeCoords); i++ {
-			ropeCoords[i] = moveTail(ropeCoords[i-1], ropeCoords[i])
-		}
 	case 'U':
 		ropeCoords[0] = coord{ropeCoords[0].x, ropeCoords[0].y + 1}
-		for i := 1; i < len(ropeCoords); i++ {
-			ropeCoords[i] = moveTail(ropeCoords[i-1], ropeCoords[i])
-		}
 	case 'D':
 		ropeCoords[0] = coord{ropeCoords[0].x, ropeCoords[0].y - 1}
-		for i := 1; i < len(ropeCoords); i++ {
-			ropeCoords[i] = moveTail(ropeCoords[i-1], ropeCoords[i])
-		}
 	default:
 		panic("unknown direction")
+	}
+	for i := 1; i < len(ropeCoords); i++ {
+		ropeCoords[i] = moveTail(ropeCoords[i-1], ropeCoords[i])
 	}
 }
 
