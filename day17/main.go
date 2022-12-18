@@ -2,22 +2,10 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/olomix/adventofcode2022/internal"
 )
-
-type figureKind uint8
-
-const (
-	HorizontalDash figureKind = iota
-	VerticalDash
-	Plus
-	Angle
-	Square
-)
-
-var figuresOrder = [...]figureKind{HorizontalDash, VerticalDash, Plus, Angle,
-	Square}
 
 type Figure interface {
 	Init(field *Field)
@@ -34,7 +22,7 @@ type FigureHorizontalDash struct {
 }
 
 func (f *FigureHorizontalDash) Init(field *Field) {
-	f.x = 2
+	f.x = 4
 	f.y = field.MaxTopOccupiedCoord() + 4
 	field.Grow(f.y + 1)
 }
@@ -43,12 +31,8 @@ func (f *FigureHorizontalDash) CanGoDown(field *Field) bool {
 	if f.y == 0 {
 		return false
 	}
-	for i := f.x; i <= f.x+3; i++ {
-		if field.rows[f.y-1][i] {
-			return false
-		}
-	}
-	return true
+	mask := byte(0b1111 << (f.x - 3))
+	return (field.rows[f.y-1] & mask) == 0
 }
 
 func (f *FigureHorizontalDash) GoDown() {
@@ -56,27 +40,27 @@ func (f *FigureHorizontalDash) GoDown() {
 }
 
 func (f *FigureHorizontalDash) GoLeft(field *Field) {
-	if f.x == 0 {
+	if f.x == 6 {
 		return
 	}
-	if !field.rows[f.y][f.x-1] {
-		f.x--
+	if field.rows[f.y]&(1<<(f.x+1)) != 0 {
+		return
 	}
+	f.x++
 }
 
 func (f *FigureHorizontalDash) GoRight(field *Field) {
-	if f.x >= 3 {
+	if f.x <= 3 {
 		return
 	}
-	if !field.rows[f.y][f.x+4] {
-		f.x++
+	if field.rows[f.y]&(1<<(f.x-1)) != 0 {
+		return
 	}
+	f.x--
 }
 
 func (f *FigureHorizontalDash) DoRest(field *Field) {
-	for i := f.x; i < f.x+4; i++ {
-		field.rows[f.y][i] = true
-	}
+	field.rows[f.y] |= 0b1111 << (f.x - 3)
 }
 
 type FigureVerticalDash struct {
@@ -85,7 +69,7 @@ type FigureVerticalDash struct {
 }
 
 func (f *FigureVerticalDash) Init(field *Field) {
-	f.x = 2
+	f.x = 4
 	f.y = field.MaxTopOccupiedCoord() + 4
 	field.Grow(f.y + 4)
 }
@@ -94,7 +78,7 @@ func (f *FigureVerticalDash) CanGoDown(field *Field) bool {
 	if f.y == 0 {
 		return false
 	}
-	return !field.rows[f.y-1][f.x]
+	return field.rows[f.y-1]&(0b1<<f.x) == 0
 }
 
 func (f *FigureVerticalDash) GoDown() {
@@ -102,32 +86,34 @@ func (f *FigureVerticalDash) GoDown() {
 }
 
 func (f *FigureVerticalDash) GoLeft(field *Field) {
-	if f.x == 0 {
+	if f.x == 6 {
 		return
 	}
-	for y := f.y; y < f.y+4; y++ {
-		if field.rows[y][f.x-1] {
-			return
-		}
-	}
-	f.x--
-}
-
-func (f *FigureVerticalDash) GoRight(field *Field) {
-	if f.x >= 6 {
+	if field.rows[f.y]&(1<<(f.x+1)) != 0 ||
+		field.rows[f.y+1]&(1<<(f.x+1)) != 0 ||
+		field.rows[f.y+2]&(1<<(f.x+1)) != 0 ||
+		field.rows[f.y+3]&(1<<(f.x+1)) != 0 {
 		return
-	}
-	for y := f.y; y < f.y+4; y++ {
-		if field.rows[y][f.x+1] {
-			return
-		}
 	}
 	f.x++
 }
 
+func (f *FigureVerticalDash) GoRight(field *Field) {
+	if f.x == 0 {
+		return
+	}
+	if field.rows[f.y]&(1<<(f.x-1)) != 0 ||
+		field.rows[f.y+1]&(1<<(f.x-1)) != 0 ||
+		field.rows[f.y+2]&(1<<(f.x-1)) != 0 ||
+		field.rows[f.y+3]&(1<<(f.x-1)) != 0 {
+		return
+	}
+	f.x--
+}
+
 func (f *FigureVerticalDash) DoRest(field *Field) {
 	for y := f.y; y < f.y+4; y++ {
-		field.rows[y][f.x] = true
+		field.rows[y] |= 1 << f.x
 	}
 }
 
@@ -146,10 +132,9 @@ func (f *FigurePlus) CanGoDown(field *Field) bool {
 	if f.y == 1 {
 		return false
 	}
-	if field.rows[f.y-2][f.x] || field.rows[f.y-1][f.x-1] || field.rows[f.y-1][f.x+1] {
-		return false
-	}
-	return true
+	mask2 := byte(0b1 << f.x)
+	mask1 := byte(0b101) << (f.x - 1)
+	return field.rows[f.y-2]&mask2 == 0 && field.rows[f.y-1]&mask1 == 0
 }
 
 func (f *FigurePlus) GoDown() {
@@ -157,34 +142,33 @@ func (f *FigurePlus) GoDown() {
 }
 
 func (f *FigurePlus) GoLeft(field *Field) {
-	if f.x == 1 {
+	if f.x == 5 {
 		return
 	}
-
-	if !field.rows[f.y][f.x-2] &&
-		!field.rows[f.y-1][f.x-1] &&
-		!field.rows[f.y+1][f.x-1] {
-		f.x--
+	if field.rows[f.y+1]&(1<<(f.x+1)) != 0 ||
+		field.rows[f.y]&(1<<(f.x+2)) != 0 ||
+		field.rows[f.y-1]&(1<<(f.x+1)) != 0 {
+		return
 	}
+	f.x++
 }
 
 func (f *FigurePlus) GoRight(field *Field) {
-	if f.x >= 5 {
+	if f.x == 1 {
 		return
 	}
-	if !field.rows[f.y][f.x+2] &&
-		!field.rows[f.y-1][f.x+1] &&
-		!field.rows[f.y+1][f.x+1] {
-		f.x++
+	if field.rows[f.y+1]&(1<<(f.x-1)) != 0 ||
+		field.rows[f.y]&(1<<(f.x-2)) != 0 ||
+		field.rows[f.y-1]&(1<<(f.x-1)) != 0 {
+		return
 	}
+	f.x--
 }
 
 func (f *FigurePlus) DoRest(field *Field) {
-	field.rows[f.y][f.x-1] = true
-	field.rows[f.y][f.x] = true
-	field.rows[f.y][f.x+1] = true
-	field.rows[f.y-1][f.x] = true
-	field.rows[f.y+1][f.x] = true
+	field.rows[f.y+1] |= 1 << f.x
+	field.rows[f.y] |= 0b111 << (f.x - 1)
+	field.rows[f.y-1] |= 0b1 << f.x
 }
 
 type FigureAngle struct {
@@ -193,7 +177,7 @@ type FigureAngle struct {
 }
 
 func (f *FigureAngle) Init(field *Field) {
-	f.x = 4
+	f.x = 2
 	f.y = field.MaxTopOccupiedCoord() + 4
 	field.Grow(f.y + 3)
 }
@@ -202,12 +186,7 @@ func (f *FigureAngle) CanGoDown(field *Field) bool {
 	if f.y == 0 {
 		return false
 	}
-	for x := f.x - 2; x <= f.x; x++ {
-		if field.rows[f.y-1][x] {
-			return false
-		}
-	}
-	return true
+	return field.rows[f.y-1]&(0b111<<f.x) == 0
 }
 
 func (f *FigureAngle) GoDown() {
@@ -215,34 +194,33 @@ func (f *FigureAngle) GoDown() {
 }
 
 func (f *FigureAngle) GoLeft(field *Field) {
-	if f.x == 2 {
+	if f.x == 4 {
 		return
 	}
-
-	if !field.rows[f.y][f.x-3] &&
-		!field.rows[f.y+1][f.x-1] &&
-		!field.rows[f.y+2][f.x-1] {
-		f.x--
+	if field.rows[f.y]&(1<<(f.x+3)) != 0 ||
+		field.rows[f.y+1]&(1<<(f.x+1)) != 0 ||
+		field.rows[f.y+2]&(1<<(f.x+1)) != 0 {
+		return
 	}
+	f.x++
 }
 
 func (f *FigureAngle) GoRight(field *Field) {
-	if f.x >= 6 {
+	if f.x == 0 {
 		return
 	}
-	if !field.rows[f.y][f.x+1] &&
-		!field.rows[f.y+1][f.x+1] &&
-		!field.rows[f.y+2][f.x+1] {
-		f.x++
+	if field.rows[f.y]&(1<<(f.x-1)) != 0 ||
+		field.rows[f.y+1]&(1<<(f.x-1)) != 0 ||
+		field.rows[f.y+2]&(1<<(f.x-1)) != 0 {
+		return
 	}
+	f.x--
 }
 
 func (f *FigureAngle) DoRest(field *Field) {
-	field.rows[f.y][f.x-2] = true
-	field.rows[f.y][f.x-1] = true
-	field.rows[f.y][f.x] = true
-	field.rows[f.y+1][f.x] = true
-	field.rows[f.y+2][f.x] = true
+	field.rows[f.y] |= 0b111 << f.x
+	field.rows[f.y+1] |= 0b1 << f.x
+	field.rows[f.y+2] |= 0b1 << f.x
 }
 
 type FigureSquare struct {
@@ -251,17 +229,16 @@ type FigureSquare struct {
 }
 
 func (f *FigureSquare) Init(field *Field) {
-	f.x = 2
+	f.x = 4
 	f.y = field.MaxTopOccupiedCoord() + 4
 	field.Grow(f.y + 2)
-	//fmt.Printf("init square at %d, %d\n", f.x, f.y)
 }
 
 func (f *FigureSquare) CanGoDown(field *Field) bool {
 	if f.y == 0 {
 		return false
 	}
-	return !field.rows[f.y-1][f.x] && !field.rows[f.y-1][f.x+1]
+	return field.rows[f.y-1]&(0b11<<(f.x-1)) == 0
 }
 
 func (f *FigureSquare) GoDown() {
@@ -269,44 +246,37 @@ func (f *FigureSquare) GoDown() {
 }
 
 func (f *FigureSquare) GoLeft(field *Field) {
-	if f.x == 0 {
-		//fmt.Println("Square: can't go left 1")
+	if f.x == 6 {
 		return
 	}
-
-	if !field.rows[f.y][f.x-1] && !field.rows[f.y+1][f.x-1] {
-		//fmt.Println("Square: goes left")
-		f.x--
-	} else {
-		//fmt.Println("Square: can't go left 2")
+	if field.rows[f.y]&(1<<(f.x+1)) != 0 ||
+		field.rows[f.y+1]&(1<<(f.x+1)) != 0 {
+		return
 	}
+	f.x++
 }
 
 func (f *FigureSquare) GoRight(field *Field) {
-	if f.x >= 5 {
-		//fmt.Println("Square: can't go right 1")
+	if f.x == 1 {
 		return
 	}
-	if !field.rows[f.y][f.x+2] && !field.rows[f.y+1][f.x+2] {
-		//fmt.Println("Square: goes right")
-		f.x++
-	} else {
-		//fmt.Println("Square: can't go right 2")
+	if field.rows[f.y]&(1<<(f.x-2)) != 0 ||
+		field.rows[f.y+1]&(1<<(f.x-2)) != 0 {
+		return
 	}
+	f.x--
 }
 
 func (f *FigureSquare) DoRest(field *Field) {
-	field.rows[f.y][f.x] = true
-	field.rows[f.y][f.x+1] = true
-	field.rows[f.y+1][f.x] = true
-	field.rows[f.y+1][f.x+1] = true
+	field.rows[f.y] |= 0b11 << (f.x - 1)
+	field.rows[f.y+1] |= 0b11 << (f.x - 1)
 }
 
 var figures = []Figure{&FigureHorizontalDash{}, &FigurePlus{},
 	&FigureAngle{}, &FigureVerticalDash{}, &FigureSquare{}}
 
 type Field struct {
-	rows        [][7]bool
+	rows        []byte
 	moves       string
 	moveIdx     int
 	state       State
@@ -315,10 +285,8 @@ type Field struct {
 
 func (f *Field) MaxTopOccupiedCoord() int {
 	for i := len(f.rows) - 1; i >= 0; i-- {
-		for j := 0; j < len(f.rows[i]); j++ {
-			if f.rows[i][j] {
-				return i
-			}
+		if f.rows[i] != 0 {
+			return i
 		}
 	}
 	return -1
@@ -331,7 +299,7 @@ func (f *Field) Step() {
 // Grow to minimum n rows
 func (f *Field) Grow(n int) {
 	for len(f.rows) < n {
-		f.rows = append(f.rows, [7]bool{})
+		f.rows = append(f.rows, 0)
 	}
 }
 
@@ -375,7 +343,7 @@ func (s *StateMoving) Step() {
 
 func main() {
 	var moves string
-	for txt := range internal.ReadLines("day17/input2.txt") {
+	for txt := range internal.ReadLines("day17/input.txt") {
 		if txt == "" {
 			continue
 		}
@@ -385,12 +353,27 @@ func main() {
 	state := &StateEmpty{}
 	field := &Field{state: state, moves: moves}
 	state.field = field
+	// 1000000 > 1514288
+	start := time.Now()
 	for field.figuresRest < 2022 {
 		field.Step()
 	}
-	printField(field)
-	return
+	//printField(field)
 	fmt.Println(field.MaxTopOccupiedCoord() + 1)
+	fmt.Println("done in", time.Since(start))
+
+	//start := time.Now()
+	//t := 0
+	//for i := 0; i < 1_000_000_000_000; i++ {
+	//	if i%1_000_000_000 == 0 {
+	//		fmt.Println(1, t, time.Since(start))
+	//	}
+	//	t += i * 2
+	//}
+	//fmt.Println(2, t, time.Since(start))
+
+	return
+	// 1.000.000.000.000
 	for field.figuresRest < 1000000000000 {
 		if field.figuresRest%100000000 == 0 {
 			fmt.Printf("cnt=%v\n", field.figuresRest)
@@ -402,8 +385,8 @@ func main() {
 
 func printField(field *Field) {
 	for row := len(field.rows) - 1; row >= 0; row-- {
-		for col := 0; col < len(field.rows[row]); col++ {
-			if field.rows[row][col] {
+		for col := 6; col >= 0; col-- {
+			if field.rows[row]&(1<<uint(col)) != 0 {
 				fmt.Print("#")
 			} else {
 				fmt.Print(".")
