@@ -53,7 +53,7 @@ func (f *FigureHorizontalDash) GoRight(field *Field) {
 	if f.x <= 3 {
 		return
 	}
-	if field.rows[f.y]&(1<<(f.x-1)) != 0 {
+	if field.rows[f.y]&(1<<(f.x-4)) != 0 {
 		return
 	}
 	f.x--
