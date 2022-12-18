@@ -23,7 +23,7 @@ type FigureHorizontalDash struct {
 
 func (f *FigureHorizontalDash) Init(field *Field) {
 	f.x = 4
-	f.y = field.MaxTopOccupiedCoord() + 4
+	f.y = field.highestY + 4
 	field.Grow(f.y + 1)
 }
 
@@ -61,6 +61,9 @@ func (f *FigureHorizontalDash) GoRight(field *Field) {
 
 func (f *FigureHorizontalDash) DoRest(field *Field) {
 	field.rows[f.y] |= 0b1111 << (f.x - 3)
+	if f.y > field.highestY {
+		field.highestY = f.y
+	}
 }
 
 type FigureVerticalDash struct {
@@ -70,7 +73,7 @@ type FigureVerticalDash struct {
 
 func (f *FigureVerticalDash) Init(field *Field) {
 	f.x = 4
-	f.y = field.MaxTopOccupiedCoord() + 4
+	f.y = field.highestY + 4
 	field.Grow(f.y + 4)
 }
 
@@ -115,6 +118,9 @@ func (f *FigureVerticalDash) DoRest(field *Field) {
 	for y := f.y; y < f.y+4; y++ {
 		field.rows[y] |= 1 << f.x
 	}
+	if f.y+3 > field.highestY {
+		field.highestY = f.y + 3
+	}
 }
 
 type FigurePlus struct {
@@ -124,7 +130,7 @@ type FigurePlus struct {
 
 func (f *FigurePlus) Init(field *Field) {
 	f.x = 3
-	f.y = field.MaxTopOccupiedCoord() + 5
+	f.y = field.highestY + 5
 	field.Grow(f.y + 2)
 }
 
@@ -169,6 +175,9 @@ func (f *FigurePlus) DoRest(field *Field) {
 	field.rows[f.y+1] |= 1 << f.x
 	field.rows[f.y] |= 0b111 << (f.x - 1)
 	field.rows[f.y-1] |= 0b1 << f.x
+	if f.y+1 > field.highestY {
+		field.highestY = f.y + 1
+	}
 }
 
 type FigureAngle struct {
@@ -178,7 +187,7 @@ type FigureAngle struct {
 
 func (f *FigureAngle) Init(field *Field) {
 	f.x = 2
-	f.y = field.MaxTopOccupiedCoord() + 4
+	f.y = field.highestY + 4
 	field.Grow(f.y + 3)
 }
 
@@ -221,6 +230,9 @@ func (f *FigureAngle) DoRest(field *Field) {
 	field.rows[f.y] |= 0b111 << f.x
 	field.rows[f.y+1] |= 0b1 << f.x
 	field.rows[f.y+2] |= 0b1 << f.x
+	if f.y+2 > field.highestY {
+		field.highestY = f.y + 2
+	}
 }
 
 type FigureSquare struct {
@@ -230,7 +242,7 @@ type FigureSquare struct {
 
 func (f *FigureSquare) Init(field *Field) {
 	f.x = 4
-	f.y = field.MaxTopOccupiedCoord() + 4
+	f.y = field.highestY + 4
 	field.Grow(f.y + 2)
 }
 
@@ -270,6 +282,9 @@ func (f *FigureSquare) GoRight(field *Field) {
 func (f *FigureSquare) DoRest(field *Field) {
 	field.rows[f.y] |= 0b11 << (f.x - 1)
 	field.rows[f.y+1] |= 0b11 << (f.x - 1)
+	if f.y+1 > field.highestY {
+		field.highestY = f.y + 1
+	}
 }
 
 var figures = []Figure{&FigureHorizontalDash{}, &FigurePlus{},
@@ -281,15 +296,7 @@ type Field struct {
 	moveIdx     int
 	state       State
 	figuresRest int
-}
-
-func (f *Field) MaxTopOccupiedCoord() int {
-	for i := len(f.rows) - 1; i >= 0; i-- {
-		if f.rows[i] != 0 {
-			return i
-		}
-	}
-	return -1
+	highestY    int
 }
 
 func (f *Field) Step() {
@@ -312,6 +319,13 @@ type StateEmpty struct {
 }
 
 func (s *StateEmpty) Step() {
+	//if s.field.highestY%2 == 0 {
+	//	mid := s.field.highestY / 2
+	//	if bytes.Equal(s.field.rows[:mid],
+	//		s.field.rows[mid:s.field.highestY+1]) {
+	//		log.Printf("found equal at %v", s.field.highestY)
+	//	}
+	//}
 	nextFigure := figures[s.field.figuresRest%len(figures)]
 	nextFigure.Init(s.field)
 	s.field.state = &StateMoving{figure: nextFigure, field: s.field}
@@ -351,15 +365,20 @@ func main() {
 	}
 
 	state := &StateEmpty{}
-	field := &Field{state: state, moves: moves}
+	field := &Field{
+		state:    state,
+		moves:    moves,
+		rows:     make([]byte, 1_000_000),
+		highestY: -1,
+	}
 	state.field = field
 	// 1000000 > 1514288
 	start := time.Now()
-	for field.figuresRest < 2022 {
+	for field.figuresRest < 10_000_000 {
 		field.Step()
 	}
 	//printField(field)
-	fmt.Println(field.MaxTopOccupiedCoord() + 1)
+	fmt.Println(field.highestY + 1)
 	fmt.Println("done in", time.Since(start))
 
 	//start := time.Now()
@@ -380,11 +399,11 @@ func main() {
 		}
 		field.Step()
 	}
-	fmt.Println(field.MaxTopOccupiedCoord() + 1)
+	fmt.Println(field.highestY + 1)
 }
 
 func printField(field *Field) {
-	for row := len(field.rows) - 1; row >= 0; row-- {
+	for row := field.highestY; row >= 0; row-- {
 		for col := 6; col >= 0; col-- {
 			if field.rows[row]&(1<<uint(col)) != 0 {
 				fmt.Print("#")
