@@ -23,12 +23,6 @@ func mustIntPtr(s string) *int {
 	return &[]int{mustInt(s)}[0]
 }
 
-type opMonkey struct {
-	left  string
-	right string
-	op    string
-}
-
 func main() {
 	nodes := map[string]*node{}
 	for txt := range internal.ReadLines("day21/input.txt") {
