@@ -30,77 +30,6 @@ type opMonkey struct {
 }
 
 func main() {
-	part1()
-	part2()
-}
-
-func part1() {
-	nums := map[string]int{}
-	ops := map[string]opMonkey{}
-	for txt := range internal.ReadLines("day21/input.txt") {
-		if txt == "" {
-			continue
-		}
-		m := numRE.FindStringSubmatch(txt)
-		if m != nil {
-			nums[m[1]] = mustInt(m[2])
-			continue
-		}
-		m = opsRE.FindStringSubmatch(txt)
-		if m == nil {
-			panic(txt)
-		}
-
-		ops[m[1]] = opMonkey{
-			left:  m[2],
-			right: m[4],
-			op:    m[3],
-		}
-	}
-
-	for len(ops) > 0 {
-		somethingDone := false
-		for k, v := range ops {
-			left, ok := nums[v.left]
-			if !ok {
-				continue
-			}
-			right, ok := nums[v.right]
-			if !ok {
-				continue
-			}
-			somethingDone = true
-			switch v.op {
-			case "+":
-				nums[k] = left + right
-			case "-":
-				nums[k] = left - right
-			case "*":
-				nums[k] = left * right
-			case "/":
-				nums[k] = left / right
-			default:
-				panic(v.op)
-			}
-			delete(ops, k)
-		}
-		if !somethingDone {
-			panic("nothing done")
-		}
-	}
-
-	fmt.Println("part 1:", nums["root"])
-}
-
-type node struct {
-	name  string
-	op    string
-	num   *int
-	left  string
-	right string
-}
-
-func part2() {
 	nodes := map[string]*node{}
 	for txt := range internal.ReadLines("day21/input.txt") {
 		if txt == "" {
@@ -127,6 +56,23 @@ func part2() {
 		}
 	}
 
+	part1(nodes)
+	part2(nodes)
+}
+
+func part1(nodes map[string]*node) {
+	fmt.Println("part 1:", doMath("root", nodes))
+}
+
+type node struct {
+	name  string
+	op    string
+	num   *int
+	left  string
+	right string
+}
+
+func part2(nodes map[string]*node) {
 	root := nodes["root"]
 	var equationSubtree string
 	var wantNum int
